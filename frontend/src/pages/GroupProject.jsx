@@ -9,18 +9,32 @@ export default function GroupProject() {
     const [message, setMessage] = useState("");
 const [messages, setMessages] = useState([]);
 
+const [code, setCode] = useState(`// Welcome to Code Collab 💙
 
+function greet() {
+  console.log("Realtime collaboration coming soon...");
+}
+
+greet();
+`);
 
 useEffect(() => {
+
   socket.emit("join-room", roomId);
 
   socket.on("receive-message", (data) => {
     setMessages((prev) => [...prev, data]);
   });
 
+  socket.on("receive-code", (newCode) => {
+    setCode(newCode);
+  });
+
   return () => {
     socket.off("receive-message");
+    socket.off("receive-code");
   };
+
 }, [roomId]);
 
 
@@ -41,6 +55,16 @@ const sendMessage = () => {
 };
 
 
+const handleCodeChange = (value) => {
+
+  setCode(value);
+
+  socket.emit("code-change", {
+    roomId,
+    code: value,
+  });
+
+};
 
   return (
     <div className="h-screen w-full bg-[#050505] text-white flex overflow-hidden">
@@ -122,18 +146,12 @@ const sendMessage = () => {
           <div className="flex-1">
 
             <Editor
-              height="100%"
-              defaultLanguage="javascript"
-              theme="vs-dark"
-              defaultValue={`// Welcome to Code Collab 💙
-
-function greet() {
-  console.log("Realtime collaboration coming soon...");
-}
-
-greet();
-`}
-            />
+  height="100%"
+  defaultLanguage="javascript"
+  theme="vs-dark"
+  value={code}
+  onChange={handleCodeChange}
+/>
 
           </div>
 
