@@ -2,7 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
-
+const roomUsers = {};
 const app = express();
 
 app.use(cors());
@@ -21,9 +21,22 @@ io.on("connection", (socket) => {
   console.log("User connected");
 
   
-  socket.on("join-room", (roomId) => {
-    socket.join(roomId);
-  });
+  socket.on("join-room", ({ roomId, username }) => {
+
+  socket.join(roomId);
+
+  socket.roomId = roomId;
+  socket.username = username;
+
+  if (!roomUsers[roomId]) {
+    roomUsers[roomId] = [];
+  }
+
+  roomUsers[roomId].push(username);
+
+  io.to(roomId).emit("participants-update", roomUsers[roomId]);
+
+});
 
   socket.on("send-message", (data) => {
     io.to(data.roomId).emit("receive-message", data);
@@ -35,8 +48,24 @@ io.on("connection", (socket) => {
 
 
   socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
+
+  const roomId = socket.roomId;
+  const username = socket.username;
+
+  if (roomUsers[roomId]) {
+
+    roomUsers[roomId] = roomUsers[roomId].filter(
+      (user) => user !== username
+    );
+
+    io.to(roomId).emit(
+      "participants-update",
+      roomUsers[roomId]
+    );
+  }
+
+  console.log("User disconnected");
+});
 });
 
 server.listen(8081, () => {

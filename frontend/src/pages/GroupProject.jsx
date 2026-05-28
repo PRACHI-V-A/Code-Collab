@@ -8,7 +8,7 @@ export default function GroupProject() {
     const [activePanel, setActivePanel] = useState("chat");
     const [message, setMessage] = useState("");
 const [messages, setMessages] = useState([]);
-
+const [participants, setParticipants] = useState([]);
 const [code, setCode] = useState(`// Welcome to Code Collab 💙
 
 function greet() {
@@ -20,7 +20,13 @@ greet();
 
 useEffect(() => {
 
-  socket.emit("join-room", roomId);
+  socket.emit("join-room", {
+  roomId,
+  username: "Prachi",
+});
+  socket.on("participants-update", (users) => {
+  setParticipants(users);
+});
 
   socket.on("receive-message", (data) => {
     setMessages((prev) => [...prev, data]);
@@ -33,6 +39,7 @@ useEffect(() => {
   return () => {
     socket.off("receive-message");
     socket.off("receive-code");
+    socket.off("participants-update");
   };
 
 }, [roomId]);
@@ -236,30 +243,45 @@ const handleCodeChange = (value) => {
   )}
 
   {/* PARTICIPANTS PANEL */}
-  {activePanel === "participants" && (
-    <div className="p-5">
+  {/* PARTICIPANTS PANEL */}
+{activePanel === "participants" && (
 
-      <h2 className="text-lg font-semibold mb-4">
-        Participants
-      </h2>
+  <div className="p-5">
 
-      <div className="bg-white/5 rounded-xl p-3 flex items-center gap-3">
+    <h2 className="text-lg font-semibold mb-4">
+      Participants
+    </h2>
 
-        <div className="w-10 h-10 rounded-full bg-cyan-400"></div>
+    <div className="flex flex-col gap-3">
 
-        <div>
-          <p className="font-medium">Prachi</p>
+      {participants.map((user, index) => (
 
-          <p className="text-xs text-gray-400">
-            Room Admin
-          </p>
+        <div
+          key={index}
+          className="bg-white/5 rounded-xl p-3 flex items-center gap-3"
+        >
+
+          <div className="w-10 h-10 rounded-full bg-cyan-400"></div>
+
+          <div>
+            <p className="font-medium">
+              {user}
+            </p>
+
+            <p className="text-xs text-gray-400">
+              Active User
+            </p>
+          </div>
+
         </div>
 
-      </div>
+      ))}
 
     </div>
-  )}
 
+  </div>
+
+)}
 </div>
 
 
