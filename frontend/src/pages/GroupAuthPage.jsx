@@ -6,23 +6,31 @@ export default function GroupAuthPage() {
     const navigate = useNavigate();
 
   const [roomId, setRoomId] = useState("");
-    const createRoom = async () => {
+   
+
+
+const createRoom = async () => {
 
   try {
 
-    const response = await axios.post(
+    const response = await axios.get(
       "http://localhost:8080/api/rooms/create"
     );
 
-    const roomId = response.data.roomId;
+    const roomCode =
+      response.data.roomCode;
 
-    navigate(`/workspace/${roomId}`);
+    navigate(`/workspace/${roomCode}`);
 
   } catch (error) {
 
-    console.log(error);
+    console.error(
+      "Room creation failed",
+      error
+    );
 
   }
+
 };
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -124,11 +132,37 @@ export default function GroupAuthPage() {
                 />
                 
                 <button
-  onClick={() => {
-  if (roomId.trim() !== "") {
-    navigate(`/workspace/${roomId}`);
+ 
+
+ onClick={async () => {
+
+  if (!roomId.trim()) return;
+
+  try {
+
+    const response = await axios.get(
+      `http://localhost:8080/api/rooms/${roomId}`
+    );
+
+    if (response.data) {
+
+      navigate(`/workspace/${roomId}`);
+
+    } else {
+
+      alert("Room does not exist");
+
+    }
+
+  } catch (error) {
+
+    alert("Invalid room");
+
   }
+
 }}
+
+
   className="mt-8 w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white font-bold text-lg hover:scale-[1.02] transition-all duration-300 shadow-[0_0_30px_rgba(168,85,247,0.35)]"
 >
   Join Workspace →

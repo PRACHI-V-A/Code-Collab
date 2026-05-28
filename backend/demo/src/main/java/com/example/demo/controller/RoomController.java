@@ -1,24 +1,47 @@
+
+
 package com.example.demo.controller;
 
+import com.example.demo.entity.Room;
+import com.example.demo.repository.RoomRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/rooms")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:5173")
 public class RoomController {
 
-    @PostMapping("/create")
-    public Map<String, String> createRoom() {
+    @Autowired
+    private RoomRepository roomRepository;
 
-        String roomId = UUID.randomUUID()
-                .toString()
-                .substring(0, 8);
+    @GetMapping("/create")
+    public Room createRoom() {
 
-        Map<String, String> response = new HashMap<>();
+        String roomCode =
+                UUID.randomUUID()
+                        .toString()
+                        .substring(0, 8);
 
-        response.put("roomId", roomId);
+        Room room = new Room(roomCode);
 
-        return response;
+        return roomRepository.save(room);
     }
+
+
+
+    @GetMapping("/{roomCode}")
+public Room getRoom(
+        @PathVariable String roomCode
+) {
+
+    return roomRepository
+            .findByRoomCode(roomCode)
+            .orElse(null);
+
+}
+
 }

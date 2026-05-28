@@ -35,7 +35,14 @@ useEffect(() => {
 });
 
 
+socket.on("receive-message", (data) => {
 
+  setMessages((prev) => [
+    ...prev,
+    data,
+  ]);
+
+});
 
   socket.on("receive-code", ({ fileName, code }) => {
 
