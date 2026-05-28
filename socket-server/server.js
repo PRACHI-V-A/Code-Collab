@@ -41,10 +41,15 @@ io.on("connection", (socket) => {
   socket.on("send-message", (data) => {
     io.to(data.roomId).emit("receive-message", data);
   });
+socket.on("code-change", (data) => {
 
-  socket.on("code-change", (data) => {
-  socket.to(data.roomId).emit("receive-code", data.code);
+  socket.to(data.roomId).emit("receive-code", {
+    fileName: data.fileName,
+    code: data.code,
+  });
+
 });
+
 
 
   socket.on("disconnect", () => {
@@ -66,6 +71,7 @@ io.on("connection", (socket) => {
 
   console.log("User disconnected");
 });
+
 });
 
 server.listen(8081, () => {

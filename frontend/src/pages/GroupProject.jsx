@@ -9,14 +9,30 @@ export default function GroupProject() {
     const [message, setMessage] = useState("");
 const [messages, setMessages] = useState([]);
 const [participants, setParticipants] = useState([]);
-const [code, setCode] = useState(`// Welcome to Code Collab 💙
+const [files, setFiles] = useState({
 
-function greet() {
-  console.log("Realtime collaboration coming soon...");
-}
+  "main.py": {
+    language: "python",
+    content: `print("Hello Prachi 💙")`,
+  },
 
-greet();
-`);
+  "app.js": {
+    language: "javascript",
+    content: `console.log("Realtime collaboration")`,
+  },
+
+  "index.html": {
+    language: "html",
+    content: `<!DOCTYPE html>
+<html>
+  <body>
+    <h1>Code Collab</h1>
+  </body>
+</html>`,
+  },
+
+});
+const [activeFile, setActiveFile] = useState("main.py");
 
 useEffect(() => {
 
@@ -32,9 +48,18 @@ useEffect(() => {
     setMessages((prev) => [...prev, data]);
   });
 
-  socket.on("receive-code", (newCode) => {
-    setCode(newCode);
-  });
+  socket.on("receive-code", ({ fileName, code }) => {
+
+  setFiles((prev) => ({
+    ...prev,
+
+    [fileName]: {
+      ...prev[fileName],
+      content: code,
+    },
+  }));
+
+});
 
   return () => {
     socket.off("receive-message");
@@ -64,10 +89,18 @@ const sendMessage = () => {
 
 const handleCodeChange = (value) => {
 
-  setCode(value);
+  setFiles((prev) => ({
+    ...prev,
+
+    [activeFile]: {
+      ...prev[activeFile],
+      content: value,
+    },
+  }));
 
   socket.emit("code-change", {
     roomId,
+    fileName: activeFile,
     code: value,
   });
 
@@ -154,9 +187,9 @@ const handleCodeChange = (value) => {
 
             <Editor
   height="100%"
-  defaultLanguage="javascript"
+  language={files[activeFile].language}
   theme="vs-dark"
-  value={code}
+ value={files[activeFile].content}
   onChange={handleCodeChange}
 />
 
@@ -175,18 +208,21 @@ const handleCodeChange = (value) => {
 
       <div className="flex flex-col gap-3 text-sm">
 
-        <div className="bg-white/5 rounded-lg px-4 py-3 hover:bg-white/10 transition-all cursor-pointer">
-          main.py
-        </div>
+        {Object.keys(files).map((fileName) => (
 
-        <div className="bg-white/5 rounded-lg px-4 py-3 hover:bg-white/10 transition-all cursor-pointer">
-          app.js
-        </div>
+  <div
+    key={fileName}
+    onClick={() => setActiveFile(fileName)}
+    className={`rounded-lg px-4 py-3 cursor-pointer transition-all ${
+      activeFile === fileName
+        ? "bg-cyan-400/20 border border-cyan-400"
+        : "bg-white/5 hover:bg-white/10"
+    }`}
+  >
+    {fileName}
+  </div>
 
-        <div className="bg-white/5 rounded-lg px-4 py-3 hover:bg-white/10 transition-all cursor-pointer">
-          index.html
-        </div>
-
+))}
       </div>
     </div>
   )}
