@@ -16,20 +16,7 @@ const [files, setFiles] = useState({
     content: `print("Hello Prachi 💙")`,
   },
 
-  "app.js": {
-    language: "javascript",
-    content: `console.log("Realtime collaboration")`,
-  },
-
-  "index.html": {
-    language: "html",
-    content: `<!DOCTYPE html>
-<html>
-  <body>
-    <h1>Code Collab</h1>
-  </body>
-</html>`,
-  },
+ 
 
 });
 const [activeFile, setActiveFile] = useState("main.py");
@@ -40,16 +27,105 @@ useEffect(() => {
   roomId,
   username: "Prachi",
 });
+
+
+
   socket.on("participants-update", (users) => {
   setParticipants(users);
 });
 
-  socket.on("receive-message", (data) => {
-    setMessages((prev) => [...prev, data]);
-  });
+
+
 
   socket.on("receive-code", ({ fileName, code }) => {
 
+  setFiles((prev) => {
+
+    if (!prev[fileName]) return prev;
+
+    return {
+      ...prev,
+
+      [fileName]: {
+        ...prev[fileName],
+        content: code,
+      },
+    };
+
+  });
+
+});
+
+
+
+  socket.on("file-deleted", (fileName) => {
+
+  setFiles((prev) => {
+
+    const updatedFiles = { ...prev };
+
+    delete updatedFiles[fileName];
+
+
+    const remainingFiles =
+  Object.keys(updatedFiles);
+
+if (remainingFiles.length > 0) {
+  setActiveFile(remainingFiles[0]);
+}
+
+    return updatedFiles;
+
+  });
+
+});
+
+
+
+
+socket.on(
+  "file-renamed",
+  ({ oldFileName, newFileName }) => {
+
+    setFiles((prev) => {
+
+
+      if (activeFile === oldFileName) {
+  setActiveFile(newFileName);
+}
+
+      const updatedFiles = { ...prev };
+
+      updatedFiles[newFileName] =
+        updatedFiles[oldFileName];
+
+      delete updatedFiles[oldFileName];
+
+      return updatedFiles;
+
+    });
+
+  }
+);
+
+
+
+  socket.on("file-created", ({ fileName, language }) => {
+
+  setFiles((prev) => ({
+    ...prev,
+
+    [fileName]: {
+      language,
+      content: "",
+    },
+  }));
+
+});
+
+
+  socket.on("receive-code", ({ fileName, code }) => {
+    
   setFiles((prev) => ({
     ...prev,
 
@@ -59,12 +135,19 @@ useEffect(() => {
     },
   }));
 
+ 
 });
+
+
 
   return () => {
     socket.off("receive-message");
     socket.off("receive-code");
     socket.off("participants-update");
+
+    socket.off("file-created");
+socket.off("file-deleted");
+socket.off("file-renamed");
   };
 
 }, [roomId]);
@@ -87,6 +170,7 @@ const sendMessage = () => {
 };
 
 
+
 const handleCodeChange = (value) => {
 
   setFiles((prev) => ({
@@ -105,6 +189,116 @@ const handleCodeChange = (value) => {
   });
 
 };
+
+const createNewFile = () => {
+
+  const fileName = prompt("Enter file name");
+
+  if (!fileName) return;
+
+  const extension = fileName.split(".").pop();
+
+  const languageMap = {
+    js: "javascript",
+    py: "python",
+    java: "java",
+    cpp: "cpp",
+    c: "c",
+    html: "html",
+    css: "css",
+    json: "json",
+    ts: "typescript",
+php: "php",
+go: "go",
+rs: "rust",
+sql: "sql",
+xml: "xml",
+md: "markdown",
+sh: "shell",
+  };
+
+  const language =
+    languageMap[extension] || "plaintext";
+
+  setFiles((prev) => ({
+    ...prev,
+
+    [fileName]: {
+      language,
+      content: "",
+    },
+  }));
+
+  socket.emit("create-file", {
+    roomId,
+    fileName,
+    language,
+  });
+
+};
+
+
+const deleteFile = (fileName) => {
+
+  const updatedFiles = { ...files };
+
+  delete updatedFiles[fileName];
+
+  setFiles(updatedFiles);
+
+  socket.emit("delete-file", {
+  roomId,
+  fileName,
+});
+
+
+  const remainingFiles =
+    Object.keys(updatedFiles);
+
+  if (remainingFiles.length > 0) {
+    setActiveFile(remainingFiles[0]);
+  }
+
+};
+
+
+const renameFile = (oldFileName) => {
+
+  const newFileName = prompt(
+    "Enter new file name",
+    oldFileName
+  );
+
+  if (!newFileName) return;
+
+
+
+
+  const updatedFiles = { ...files };
+
+  updatedFiles[newFileName] =
+    updatedFiles[oldFileName];
+
+  delete updatedFiles[oldFileName];
+
+  setFiles(updatedFiles);
+
+
+  socket.emit("rename-file", {
+  roomId,
+  oldFileName,
+  newFileName,
+});
+
+  if (activeFile === oldFileName) {
+    setActiveFile(newFileName);
+  }
+
+};
+
+
+
+
 
   return (
     <div className="h-screen w-full bg-[#050505] text-white flex overflow-hidden">
@@ -185,13 +379,17 @@ const handleCodeChange = (value) => {
           {/* EDITOR */}
           <div className="flex-1">
 
-            <Editor
+           {files[activeFile] && (
+
+<Editor
   height="100%"
   language={files[activeFile].language}
   theme="vs-dark"
- value={files[activeFile].content}
+  value={files[activeFile].content}
   onChange={handleCodeChange}
 />
+
+)}
 
           </div>
 
@@ -206,23 +404,56 @@ const handleCodeChange = (value) => {
         Project Files
       </h2>
 
-      <div className="flex flex-col gap-3 text-sm">
 
-        {Object.keys(files).map((fileName) => (
+      <button
+  onClick={createNewFile}
+  className="w-full mb-4 py-2 rounded-lg bg-cyan-400 text-black font-semibold"
+>
+  + New File
+</button>
+
+      <div className="flex flex-col gap-3 text-sm">
+{Object.keys(files).map((fileName) => (
 
   <div
     key={fileName}
-    onClick={() => setActiveFile(fileName)}
-    className={`rounded-lg px-4 py-3 cursor-pointer transition-all ${
+    className={`rounded-lg px-4 py-3 transition-all flex items-center justify-between ${
       activeFile === fileName
         ? "bg-cyan-400/20 border border-cyan-400"
-        : "bg-white/5 hover:bg-white/10"
+        : "bg-white/5"
     }`}
   >
-    {fileName}
+
+    <div
+      onClick={() => setActiveFile(fileName)}
+      className="cursor-pointer flex-1"
+    >
+      {fileName}
+    </div>
+
+    <div className="flex gap-2">
+
+      <button
+        onClick={() => renameFile(fileName)}
+        className="text-yellow-400"
+      >
+        ✏️
+      </button>
+
+      <button
+        onClick={() => deleteFile(fileName)}
+        className="text-red-400"
+      >
+        🗑
+      </button>
+
+    </div>
+
   </div>
 
 ))}
+
+  
       </div>
     </div>
   )}

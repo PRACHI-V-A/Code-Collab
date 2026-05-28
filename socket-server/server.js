@@ -41,7 +41,10 @@ io.on("connection", (socket) => {
   socket.on("send-message", (data) => {
     io.to(data.roomId).emit("receive-message", data);
   });
-socket.on("code-change", (data) => {
+
+
+
+  socket.on("code-change", (data) => {
 
   socket.to(data.roomId).emit("receive-code", {
     fileName: data.fileName,
@@ -49,6 +52,43 @@ socket.on("code-change", (data) => {
   });
 
 });
+
+socket.on("create-file", (data) => {
+
+  socket.to(data.roomId).emit("file-created", {
+    fileName: data.fileName,
+    language: data.language,
+  });
+
+});
+
+
+
+
+
+
+socket.on("delete-file", (data) => {
+
+  socket.to(data.roomId).emit(
+    "file-deleted",
+    data.fileName
+  );
+
+});
+
+
+socket.on("rename-file", (data) => {
+
+  socket.to(data.roomId).emit(
+    "file-renamed",
+    {
+      oldFileName: data.oldFileName,
+      newFileName: data.newFileName,
+    }
+  );
+
+});
+
 
 
 
