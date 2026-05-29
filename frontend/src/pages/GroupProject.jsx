@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { socket } from "../socket";
 import Editor from "@monaco-editor/react";
 import api from "../api";
-
+import { useRef } from "react";
 import axios from "axios";
 export default function GroupProject() {
+  
   const { roomId } = useParams();
     const [activePanel, setActivePanel] = useState("chat");
     const [message, setMessage] = useState("");
@@ -17,9 +18,9 @@ const [files, setFiles] = useState({
 });
 const [activeFile, setActiveFile] = useState();
 
-
+const saveTimeout = useRef(null);
 const saveFileToDatabase = async () => {
-
+  console.log("AutoSve called")
   try {
 
     await api.post(
@@ -42,6 +43,10 @@ const saveFileToDatabase = async () => {
 };
 
 useEffect(() => {
+
+
+ 
+
 
   socket.emit("join-room", {
   roomId,
@@ -80,6 +85,15 @@ socket.on("receive-message", (data) => {
     };
 
   });
+
+
+   return () => {
+
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current);
+    }
+
+  };
 
 });
 
@@ -256,6 +270,17 @@ const handleCodeChange = (value) => {
     fileName: activeFile,
     code: value,
   });
+
+
+  if (saveTimeout.current) {
+  clearTimeout(saveTimeout.current);
+}
+
+saveTimeout.current = setTimeout(() => {
+
+  saveFileToDatabase();
+
+}, 3000);
 
 };
 
