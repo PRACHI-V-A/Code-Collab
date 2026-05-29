@@ -2,7 +2,9 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { socket } from "../socket";
 import Editor from "@monaco-editor/react";
+import api from "../api";
 
+import axios from "axios";
 export default function GroupProject() {
   const { roomId } = useParams();
     const [activePanel, setActivePanel] = useState("chat");
@@ -11,15 +13,33 @@ const [messages, setMessages] = useState([]);
 const [participants, setParticipants] = useState([]);
 const [files, setFiles] = useState({
 
-  "main.py": {
-    language: "python",
-    content: `print("Hello Prachi 💙")`,
-  },
-
- 
 
 });
-const [activeFile, setActiveFile] = useState("main.py");
+const [activeFile, setActiveFile] = useState();
+
+
+const saveFileToDatabase = async () => {
+
+  try {
+
+    await api.post(
+      `/files/save/${roomId}`,
+      {
+        fileName: activeFile,
+        language: files[activeFile].language,
+        content: files[activeFile].content,
+      }
+    );
+
+    console.log("File saved");
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
+
+};
 
 useEffect(() => {
 
@@ -117,8 +137,49 @@ socket.on(
 
 
 
-  socket.on("file-created", ({ fileName, language }) => {
 
+
+  const loadFiles = async () => {
+
+    try {
+
+      const response = await axios.get(
+        `http://localhost:8080/api/files/${roomId}`
+      );
+
+      const loadedFiles = {};
+
+response.data.forEach((file) => {
+
+  loadedFiles[file.fileName] = {
+    language: file.language,
+    content: file.content,
+  };
+
+});
+
+setFiles(loadedFiles);
+
+const firstFile = response.data[0];
+if (firstFile) {
+
+  setActiveFile(firstFile.fileName);
+
+}
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  };
+  loadFiles();
+
+
+
+
+
+  socket.on("file-created", ({ fileName, language }) => {
   setFiles((prev) => ({
     ...prev,
 
@@ -129,6 +190,7 @@ socket.on(
   }));
 
 });
+
 
 
   socket.on("receive-code", ({ fileName, code }) => {
@@ -376,6 +438,13 @@ const renameFile = (oldFileName) => {
             <button className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-purple-500 text-black font-semibold">
               Run Code
             </button>
+
+            <button
+  onClick={saveFileToDatabase}
+  className="px-5 py-2 rounded-xl bg-green-500 text-black font-semibold"
+>
+  Save
+</button>
 
           </div>
         </div>
